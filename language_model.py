@@ -12,7 +12,8 @@ class WordEmbedding(nn.Module):
     """
     def __init__(self, ntoken, emb_dim, dropout):
         super(WordEmbedding, self).__init__()
-        self.emb = nn.Embedding(ntoken+1, emb_dim, padding_idx=ntoken)
+        self.emb = nn.Embedding(ntoken+1, emb_dim, padding_idx=ntoken) #? why there is a padding_index
+        #* Embedding is simply a lookup table, its shape is (ntoken+1, emb_dim)
         self.dropout = nn.Dropout(dropout)
         self.ntoken = ntoken
         self.emb_dim = emb_dim
