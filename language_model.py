@@ -1,3 +1,4 @@
+import re
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -21,7 +22,8 @@ class WordEmbedding(nn.Module):
     def init_embedding(self, np_file):
         weight_init = torch.from_numpy(np.load(np_file))
         assert weight_init.shape == (self.ntoken, self.emb_dim)
-        self.emb.weight.data[:self.ntoken] = weight_init
+        #? self.emb.weight.data[:self.ntoken] = weight_init
+        self.emv.weight.set_(weight_init)
 
     def forward(self, x):
         emb = self.emb(x)
@@ -49,7 +51,7 @@ class QuestionEmbedding(nn.Module):
         self.rnn_type = rnn_type
         self.ndirections = 1 + int(bidirect)
 
-    def init_hidden(self, batch):
+    def init_hidden(self, batch, deactivate):
         # just to get the type of tensor
         weight = next(self.parameters()).data
         hid_shape = (self.nlayers * self.ndirections, batch, self.num_hid)
@@ -58,12 +60,21 @@ class QuestionEmbedding(nn.Module):
                     Variable(weight.new(*hid_shape).zero_()))
         else:
             return Variable(weight.new(*hid_shape).zero_())
+    #? ^ make no sense
+
+    def init_hidden(self, batch):
+        hid_shape = (self.nlayers * self.ndirections, batch, self.num_hid)
+        if self.rnn_type == "LSTM":
+            return (torch.zeros(hid_shape, dtype=torch.float32, device='cuda', requires_grad=True),
+                    torch.zeros(hid_shape, dtype=torch.float32, device='cuda', requires_grad=True))
+        else:
+            return torch.zeros(hid_shape, dtype=torch.float32, device='cuda', requires_grad=True)
 
     def forward(self, x):
         # x: [batch, sequence, in_dim]
         batch = x.size(0)
         hidden = self.init_hidden(batch)
-        self.rnn.flatten_parameters()
+        self.rnn.flatten_parameters()   #* Resets parameter data pointer so that they can use faster code paths.
         output, hidden = self.rnn(x, hidden)
 
         if self.ndirections == 1:
