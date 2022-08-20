@@ -4,7 +4,7 @@ import sys
 import json
 import numpy as np
 import re
-import cPickle
+import pickle as cPickle
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dataset import Dictionary
@@ -70,7 +70,7 @@ manual_map = { 'none': '0',
                'nine': '9',
               'ten': '10'}
 articles = ['a', 'an', 'the']
-period_strip = re.compile("(?!<=\d)(\.)(?!\d)")
+period_strip = re.compile("(?!<=\d)(\.)(?!\d)")      #* both the latter and former of . should not be numbers
 comma_strip = re.compile("(\d)(\,)(\d)")
 punct = [';', r"/", '[', ']', '"', '{', '}',
                 '(', ')', '=', '+', '\\', '_', '-',
@@ -94,7 +94,7 @@ def process_punctuation(inText):
     outText = inText
     for p in punct:
         if (p + ' ' in inText or ' ' + p in inText) \
-           or (re.search(comma_strip, inText) != None):
+           or (re.search(comma_strip, inText) != None): # ? 
             outText = outText.replace(p, '')
         else:
             outText = outText.replace(p, ' ')
@@ -135,16 +135,19 @@ def filter_answers(answers_dset, min_occurence):
     """
     occurence = {}
 
-    for ans_entry in answers_dset:
+    for ans_entry in answers_dset:  #& ans_entry is the largest dictionary
         answers = ans_entry['answers']
-        gtruth = ans_entry['multiple_choice_answer']
+        gtruth = ans_entry['multiple_choice_answer']    #& gtruth is a string standing for groundtruth 
         gtruth = preprocess_answer(gtruth)
         if gtruth not in occurence:
             occurence[gtruth] = set()
-        occurence[gtruth].add(ans_entry['question_id'])
+        occurence[gtruth].add(ans_entry['question_id']) #& occurence is a dictionary that from gtruths to question ids
+    delete_answers = []
     for answer in occurence.keys():
         if len(occurence[answer]) < min_occurence:
-            occurence.pop(answer)
+            delete_answers.append(answer)
+    for answer in delete_answers:
+        occurence.pop(answer)       #& delete the answers that appear less that min_occurence times from occurence 
 
     print('Num of answers that appear >= %d times: %d' % (
         min_occurence, len(occurence)))
@@ -182,10 +185,11 @@ def compute_target(answers_dset, ans2label, name, cache_root='data/cache'):
 
     Write result into a cache file
     """
-    target = []
-    for ans_entry in answers_dset:
+    target = []     #& a list of (question, image, labels, scores) dictionarys
+    for ans_entry in answers_dset:  #& ans_entry is the largest dictionary
         answers = ans_entry['answers']
         answer_count = {}
+        #* calculate answer_count(dict from answer to numbers, since there may be different answers)
         for answer in answers:
             answer_ = answer['answer']
             answer_count[answer_] = answer_count.get(answer_, 0) + 1
@@ -193,8 +197,8 @@ def compute_target(answers_dset, ans2label, name, cache_root='data/cache'):
         labels = []
         scores = []
         for answer in answer_count:
-            if answer not in ans2label:
-                continue
+            if answer not in ans2label: 
+                continue    #* the occurence of the answer is to small in the whole file(min_occurence), so is ignorant
             labels.append(ans2label[answer])
             score = get_score(answer_count[answer])
             scores.append(score)
@@ -237,6 +241,9 @@ if __name__ == '__main__':
     val_question_file = 'data/v2_OpenEnded_mscoco_val2014_questions.json'
     val_questions = json.load(open(val_question_file))['questions']
 
+    #* answers: a huge list of dictionarys which contain "question_type", "multiple_choice_answer"
+    #* "answers"(a list of dictionarys of 10 answers with 'answer', 'answer_confidence' and 'answer_id')
+    #* "image_id", "answer_type" and "question_id"
     answers = train_answers + val_answers
     occurence = filter_answers(answers, 9)
     ans2label = create_ans2label(occurence, 'trainval')

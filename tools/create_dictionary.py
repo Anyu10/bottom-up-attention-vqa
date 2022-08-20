@@ -26,7 +26,7 @@ def create_dictionary(dataroot):
 
 def create_glove_embedding_init(idx2word, glove_file):
     word2emb = {}
-    with open(glove_file, 'r') as f:
+    with open(glove_file, 'r', encoding='utf-8') as f:
         entries = f.readlines()
     emb_dim = len(entries[0].split(' ')) - 1
     print('embedding dim is %d' % emb_dim)
@@ -35,8 +35,9 @@ def create_glove_embedding_init(idx2word, glove_file):
     for entry in entries:
         vals = entry.split(' ')
         word = vals[0]
-        vals = map(float, vals[1:])
-        word2emb[word] = np.array(vals)
+        map(float, vals[1:])
+        word2emb[word] = np.array(vals[1:])
+    print("word2emb successfully created!")
     for idx, word in enumerate(idx2word):
         if word not in word2emb:
             continue

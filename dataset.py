@@ -1,7 +1,7 @@
 from __future__ import print_function
 import os
 import json
-import cPickle
+import pickle as cPickle
 import numpy as np
 import utils
 import h5py
@@ -83,9 +83,14 @@ def _load_dataset(dataroot, name, img_id2val):
         dataroot, 'v2_OpenEnded_mscoco_%s2014_questions.json' % name)
     questions = sorted(json.load(open(question_path))['questions'],
                        key=lambda x: x['question_id'])
+    #*** item of questions: question_form = {image_id: xxx, question: xxx, question_id: xxx}
+    #& sorted by question_id, and question_id is unique (image_id may overlap)
     answer_path = os.path.join(dataroot, 'cache', '%s_target.pkl' % name)
     answers = cPickle.load(open(answer_path, 'rb'))
     answers = sorted(answers, key=lambda x: x['question_id'])
+    #*** item of answers: 
+    #*** answer_form = {question_id: xxx, image_id: xxx, labels: xxx, scores: xxx}
+    #& sorted by question_id, and question_id is unique (image_id may overlap)
 
     utils.assert_eq(len(questions), len(answers))
     entries = []
@@ -94,7 +99,7 @@ def _load_dataset(dataroot, name, img_id2val):
         utils.assert_eq(question['image_id'], answer['image_id'])
         img_id = question['image_id']
         entries.append(_create_entry(img_id2val[img_id], question, answer))
-
+        #* entries: [{question_id: xxx, image_id: xxx, image: xxx, question: xxx, answer: {labels: xxx, scores: xxx}}, ...]
     return entries
 
 
@@ -110,6 +115,7 @@ class VQAFeatureDataset(Dataset):
         self.num_ans_candidates = len(self.ans2label)
 
         self.dictionary = dictionary
+        #* stores two dict that (from indices to words) and (from words to indices)
 
         self.img_id2idx = cPickle.load(
             open(os.path.join(dataroot, '%s36_imgid2idx.pkl' % name)))
@@ -117,11 +123,15 @@ class VQAFeatureDataset(Dataset):
         h5_path = os.path.join(dataroot, '%s36.hdf5' % name)
         with h5py.File(h5_path, 'r') as hf:
             self.features = np.array(hf.get('image_features'))
+            #* shape of features are (len_image_ids, num_boxes, feature_length)
             self.spatials = np.array(hf.get('spatial_features'))
+            #* shape of featires are (len_image_ids, num_boxes, 6)
 
         self.entries = _load_dataset(dataroot, name, self.img_id2idx)
+        #* entries: [{question_id: xxx, image_id: xxx, image: xxx, question: xxx, answer: {labels: xxx, scores: xxx}}, ...]
 
         self.tokenize()
+        #* entries: [{question_id: xxx, image_id: xxx, image: xxx, question: xxx, answer: {labels: xxx, scores: xxx}, q_token: xxx}, ...]
         self.tensorize()
         self.v_dim = self.features.size(2)
         self.s_dim = self.spatials.size(2)
@@ -141,8 +151,10 @@ class VQAFeatureDataset(Dataset):
                 tokens = padding + tokens
             utils.assert_eq(len(tokens), max_length)
             entry['q_token'] = tokens
+            #* make entry have a key 'q_token' that represents question(a sequence of indices of fixed length 14)
 
     def tensorize(self):
+        #& turn numpy array to tensors
         self.features = torch.from_numpy(self.features)
         self.spatials = torch.from_numpy(self.spatials)
 

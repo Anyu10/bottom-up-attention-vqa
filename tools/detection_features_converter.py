@@ -17,21 +17,22 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import base64
 import csv
 import h5py
-import cPickle
+import pickle as cPickle
 import numpy as np
 import utils
 
-
-csv.field_size_limit(sys.maxsize)
+csv.field_size_limit(2198989)
 
 FIELDNAMES = ['image_id', 'image_w', 'image_h', 'num_boxes', 'boxes', 'features']
-infile = 'data/trainval_36/trainval_resnet101_faster_rcnn_genome_36.tsv'
+infile = 'data/trainval_36/trainval_resnet101_faster_rcnn_genome_36.tsv'    #* tab-seperated value
+
 train_data_file = 'data/train36.hdf5'
 val_data_file = 'data/val36.hdf5'
-train_indices_file = 'data/train36_imgid2idx.pkl'
-val_indices_file = 'data/val36_imgid2idx.pkl'
-train_ids_file = 'data/train_ids.pkl'
-val_ids_file = 'data/val_ids.pkl'
+
+train_indices_file = 'data/train36_imgid2idx.pkl'   #* image ids to indices
+val_indices_file = 'data/val36_imgid2idx.pkl'       #* image ids to indices
+train_ids_file = 'data/train_ids.pkl'   #* indices to image ids
+val_ids_file = 'data/val_ids.pkl'       #* indices to image ids
 
 feature_length = 2048
 num_fixed_boxes = 36
@@ -42,8 +43,8 @@ if __name__ == '__main__':
     h_val = h5py.File(val_data_file, "w")
 
     if os.path.exists(train_ids_file) and os.path.exists(val_ids_file):
-        train_imgids = cPickle.load(open(train_ids_file))
-        val_imgids = cPickle.load(open(val_ids_file))
+        train_imgids = cPickle.load(open(train_ids_file, 'rb'))
+        val_imgids = cPickle.load(open(val_ids_file, 'rb'))
     else:
         train_imgids = utils.load_imageid('data/train2014')
         val_imgids = utils.load_imageid('data/val2014')
@@ -54,7 +55,7 @@ if __name__ == '__main__':
     val_indices = {}
 
     train_img_features = h_train.create_dataset(
-        'image_features', (len(train_imgids), num_fixed_boxes, feature_length), 'f')
+        'image_features', (len(train_imgids), num_fixed_boxes, feature_length), 'f')    #* 'f' is the datatype paramerter
     train_img_bb = h_train.create_dataset(
         'image_bb', (len(train_imgids), num_fixed_boxes, 4), 'f')
     train_spatial_img_features = h_train.create_dataset(
@@ -66,28 +67,30 @@ if __name__ == '__main__':
         'image_features', (len(val_imgids), num_fixed_boxes, feature_length), 'f')
     val_spatial_img_features = h_val.create_dataset(
         'spatial_features', (len(val_imgids), num_fixed_boxes, 6), 'f')
+    #^ create the hdf5 files and training and validation dataset
 
     train_counter = 0
     val_counter = 0
 
     print("reading tsv...")
-    with open(infile, "r+b") as tsv_in_file:
+    with open(infile, "r") as tsv_in_file:
         reader = csv.DictReader(tsv_in_file, delimiter='\t', fieldnames=FIELDNAMES)
         for item in reader:
             item['num_boxes'] = int(item['num_boxes'])
             image_id = int(item['image_id'])
             image_w = float(item['image_w'])
             image_h = float(item['image_h'])
+            #^ change them to the right datatype as it is
             bboxes = np.frombuffer(
-                base64.decodestring(item['boxes']),
+                base64.b64decode(item['boxes']),
                 dtype=np.float32).reshape((item['num_boxes'], -1))
-
             box_width = bboxes[:, 2] - bboxes[:, 0]
             box_height = bboxes[:, 3] - bboxes[:, 1]
             scaled_width = box_width / image_w
             scaled_height = box_height / image_h
             scaled_x = bboxes[:, 0] / image_w
             scaled_y = bboxes[:, 1] / image_h
+            #^ shape of the variables above are (num_boxes)
 
             box_width = box_width[..., np.newaxis]
             box_height = box_height[..., np.newaxis]
@@ -95,6 +98,7 @@ if __name__ == '__main__':
             scaled_height = scaled_height[..., np.newaxis]
             scaled_x = scaled_x[..., np.newaxis]
             scaled_y = scaled_y[..., np.newaxis]
+            #^ shape of the variables above are (num_boxes, 1)
 
             spatial_features = np.concatenate(
                 (scaled_x,
@@ -104,13 +108,14 @@ if __name__ == '__main__':
                  scaled_width,
                  scaled_height),
                 axis=1)
+            #^ shape of the spatial_features is (num_boxes, num_attributes--6), spatial features are all scaled features
 
             if image_id in train_imgids:
                 train_imgids.remove(image_id)
                 train_indices[image_id] = train_counter
                 train_img_bb[train_counter, :, :] = bboxes
                 train_img_features[train_counter, :, :] = np.frombuffer(
-                    base64.decodestring(item['features']),
+                    base64.b64decode(item['features']),
                     dtype=np.float32).reshape((item['num_boxes'], -1))
                 train_spatial_img_features[train_counter, :, :] = spatial_features
                 train_counter += 1
@@ -119,7 +124,7 @@ if __name__ == '__main__':
                 val_indices[image_id] = val_counter
                 val_img_bb[val_counter, :, :] = bboxes
                 val_img_features[val_counter, :, :] = np.frombuffer(
-                    base64.decodestring(item['features']),
+                    base64.b64decode(item['features']),
                     dtype=np.float32).reshape((item['num_boxes'], -1))
                 val_spatial_img_features[val_counter, :, :] = spatial_features
                 val_counter += 1
