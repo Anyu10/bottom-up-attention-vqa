@@ -118,7 +118,7 @@ class VQAFeatureDataset(Dataset):
         #* stores two dict that (from indices to words) and (from words to indices)
 
         self.img_id2idx = cPickle.load(
-            open(os.path.join(dataroot, '%s36_imgid2idx.pkl' % name)))
+            open(os.path.join(dataroot, '%s36_imgid2idx.pkl' % name), 'rb'))
         print('loading features from h5 file')
         h5_path = os.path.join(dataroot, '%s36.hdf5' % name)
         with h5py.File(h5_path, 'r') as hf:
