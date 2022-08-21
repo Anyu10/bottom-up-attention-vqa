@@ -23,7 +23,7 @@ class WordEmbedding(nn.Module):
         weight_init = torch.from_numpy(np.load(np_file))
         assert weight_init.shape == (self.ntoken, self.emb_dim)
         #? self.emb.weight.data[:self.ntoken] = weight_init
-        self.emv.weight.set_(weight_init)
+        self.emb.weight.data = weight_init
 
     def forward(self, x):
         emb = self.emb(x)

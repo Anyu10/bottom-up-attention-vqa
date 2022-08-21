@@ -10,12 +10,12 @@ def instance_bce_with_logits(logits, labels):
     assert logits.dim() == 2
 
     loss = nn.functional.binary_cross_entropy_with_logits(logits, labels)
-    loss *= labels.size(1)
+    loss *= labels.size(1)  #? why multiply a size(1)
     return loss
 
 
 def compute_score_with_logits(logits, labels):
-    logits = torch.max(logits, 1)[1].data # argmax
+    logits = torch.max(logits, 1)[1] # argmax
     one_hots = torch.zeros(*labels.size()).cuda()
     one_hots.scatter_(1, logits.view(-1, 1), 1)
     scores = (one_hots * labels)
@@ -34,20 +34,26 @@ def train(model, train_loader, eval_loader, num_epochs, output):
         t = time.time()
 
         for i, (v, b, q, a) in enumerate(train_loader):
-            v = Variable(v).cuda()
-            b = Variable(b).cuda()
-            q = Variable(q).cuda()
-            a = Variable(a).cuda()
+            #v = Variable(v).cuda()
+            #b = Variable(b).cuda()
+            #q = Variable(q).cuda()
+            #a = Variable(a).cuda()
+            v = v.to('cuda')
+            b = b.to('cuda')
+            q = q.to('cuda')
+            a = a.to('cuda')
 
             pred = model(v, b, q, a)
             loss = instance_bce_with_logits(pred, a)
             loss.backward()
-            nn.utils.clip_grad_norm(model.parameters(), 0.25)
+            nn.utils.clip_grad_norm(model.parameters(), 0.25) #? what is clip_grad_norm
             optim.step()
             optim.zero_grad()
 
-            batch_score = compute_score_with_logits(pred, a.data).sum()
-            total_loss += loss.data[0] * v.size(0)
+            #batch_score = compute_score_with_logits(pred, a.data).sum()
+            batch_score = compute_score_with_logits(pred, a).sum()  #* compute similarity
+            #total_loss += loss.data[0] * v.size(0)
+            total_loss += loss.item() * v.size(0)
             train_score += batch_score
 
         total_loss /= len(train_loader.dataset)
