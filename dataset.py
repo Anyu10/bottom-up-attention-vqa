@@ -185,7 +185,7 @@ class VQAFeatureDataset(Dataset):
         scores = answer['scores']
         target = torch.zeros(self.num_ans_candidates)
         if labels is not None:
-            target.scatter_(0, labels, scores)
+            target.scatter_(0, labels.long(), scores)
 
         return features, spatials, question, target
 

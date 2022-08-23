@@ -17,7 +17,7 @@ def instance_bce_with_logits(logits, labels):
 def compute_score_with_logits(logits, labels):
     logits = torch.max(logits, 1)[1] # argmax
     one_hots = torch.zeros(*labels.size()).cuda()
-    one_hots.scatter_(1, logits.view(-1, 1), 1)
+    one_hots.scatter_(1, logits.view(-1, 1).long(), 1)
     scores = (one_hots * labels)
     return scores
 
