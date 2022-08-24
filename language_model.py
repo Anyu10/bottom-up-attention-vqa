@@ -13,7 +13,7 @@ class WordEmbedding(nn.Module):
     """
     def __init__(self, ntoken, emb_dim, dropout):
         super(WordEmbedding, self).__init__()
-        self.emb = nn.Embedding(ntoken+1, emb_dim, padding_idx=ntoken) #? why there is a padding_index
+        #self.emb = nn.Embedding(ntoken+1, emb_dim, padding_idx=ntoken) #? why there is a padding_index
         #* Embedding is simply a lookup table, its shape is (ntoken+1, emb_dim)
         self.dropout = nn.Dropout(dropout)
         self.ntoken = ntoken
@@ -21,9 +21,11 @@ class WordEmbedding(nn.Module):
 
     def init_embedding(self, np_file):
         weight_init = torch.from_numpy(np.load(np_file))
-        assert weight_init.shape == (self.ntoken, self.emb_dim)
-        self.emb.weight.data[:self.ntoken] = weight_init
-        # self.emb.weight.data = weight_init
+        p = torch.zeros((1, weight_init.shape[1]))
+        weight_init = torch.cat([weight_init, p], dim=0)
+        assert weight_init.shape == (self.ntoken+1, self.emb_dim)
+        self.emb = nn.Embedding.from_pretrained(weight_init, padding_idx=self.ntoken)
+        # self.emb.weight.data[:ntoken] = weight_init
 
     def forward(self, x):
         emb = self.emb(x)
