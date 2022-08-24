@@ -8,7 +8,7 @@ class SimpleClassifier(nn.Module):
         layers = [
             weight_norm(nn.Linear(in_dim, hid_dim), dim=None),
             nn.ReLU(),
-            nn.Dropout(dropout, inplace=True),
+            nn.Dropout(dropout, inplace=False),
             weight_norm(nn.Linear(hid_dim, out_dim), dim=None)
         ]
         self.main = nn.Sequential(*layers)
@@ -16,3 +16,11 @@ class SimpleClassifier(nn.Module):
     def forward(self, x):
         logits = self.main(x)
         return logits
+
+if __name__ == '__main__':
+    import torch
+    model = SimpleClassifier(10, 5, 2, 0.5)
+    input = torch.randn((10, 10), requires_grad=True)
+    output = model(input).sum()
+    output.backward()
+    
