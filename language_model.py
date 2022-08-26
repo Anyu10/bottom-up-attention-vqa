@@ -53,16 +53,15 @@ class QuestionEmbedding(nn.Module):
         self.rnn_type = rnn_type
         self.ndirections = 1 + int(bidirect)
 
-    def init_hidden(self, batch, deactivate):
-        # just to get the type of tensor
-        weight = next(self.parameters()).data
-        hid_shape = (self.nlayers * self.ndirections, batch, self.num_hid)
-        if self.rnn_type == 'LSTM':
-            return (Variable(weight.new(*hid_shape).zero_()),
-                    Variable(weight.new(*hid_shape).zero_()))
-        else:
-            return Variable(weight.new(*hid_shape).zero_())
-    #? ^ make no sense
+    # def init_hidden(self, batch, deactivate):
+    #     # just to get the type of tensor
+    #     weight = next(self.parameters()).data
+    #     hid_shape = (self.nlayers * self.ndirections, batch, self.num_hid)
+    #     if self.rnn_type == 'LSTM':
+    #         return (Variable(weight.new(*hid_shape).zero_()),
+    #                 Variable(weight.new(*hid_shape).zero_()))
+    #     else:
+    #         return Variable(weight.new(*hid_shape).zero_())
 
     def init_hidden(self, batch):
         hid_shape = (self.nlayers * self.ndirections, batch, self.num_hid)
