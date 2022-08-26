@@ -5,7 +5,9 @@ import json
 import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dataset import Dictionary
-
+#~ 1. create a dictionary(idx to words & words to idx) that contains all the word mapping for words in training and validation data
+#~ 2. create a word embedding(words to embedding), and use it to generate weights(idx to embedding)
+#~ 3. pickle down the dictionary(idx to words & words to idx) and use numpy to save the weights(idx to embedding)
 
 def create_dictionary(dataroot):
     dictionary = Dictionary()
