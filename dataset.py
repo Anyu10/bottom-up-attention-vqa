@@ -81,8 +81,7 @@ def _load_dataset(dataroot, name, img_id2val):
     """
     question_path = os.path.join(
         dataroot, 'v2_OpenEnded_mscoco_%s2014_questions.json' % name)
-    questions = sorted(json.load(open(question_path))['questions'],
-                       key=lambda x: x['question_id'])
+    questions = sorted(json.load(open(question_path))['questions'], key=lambda x: x['question_id'])
     #*** item of questions: question_form = {image_id: xxx, question: xxx, question_id: xxx}
     #& sorted by question_id, and question_id is unique (image_id may overlap)
     answer_path = os.path.join(dataroot, 'cache', '%s_target.pkl' % name)
@@ -117,8 +116,7 @@ class VQAFeatureDataset(Dataset):
         self.dictionary = dictionary
         #* stores two dict that (from indices to words) and (from words to indices)
 
-        self.img_id2idx = cPickle.load(
-            open(os.path.join(dataroot, '%s36_imgid2idx.pkl' % name), 'rb'))
+        self.img_id2idx = cPickle.load(open(os.path.join(dataroot, '%s36_imgid2idx.pkl' % name), 'rb'))
         print('loading features from h5 file')
         h5_path = os.path.join(dataroot, '%s36.hdf5' % name)
         with h5py.File(h5_path, 'r') as hf:

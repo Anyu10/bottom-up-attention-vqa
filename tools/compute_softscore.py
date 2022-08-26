@@ -10,7 +10,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dataset import Dictionary
 import utils
 
-
 contractions = {
     "aint": "ain't", "arent": "aren't", "cant": "can't", "couldve":
     "could've", "couldnt": "couldn't", "couldn'tve": "couldn't've",
@@ -56,7 +55,6 @@ contractions = {
     "you'd", "youd've": "you'd've", "you'dve": "you'd've", "youll":
     "you'll", "youre": "you're", "youve": "you've"
 }
-
 manual_map = { 'none': '0',
               'zero': '0',
               'one': '1',
@@ -70,14 +68,18 @@ manual_map = { 'none': '0',
                'nine': '9',
               'ten': '10'}
 articles = ['a', 'an', 'the']
-period_strip = re.compile("(?!<=\d)(\.)(?!\d)")      #* both the latter and former of . should not be numbers
+#^ for function process_digit_article
+
+# period_strip = re.compile("(?!<=\d)(\.)(?!\d)")     
+period_strip = re.compile("(?<!\d)(\.)(?!\d)")
 comma_strip = re.compile("(\d)(\,)(\d)")
 punct = [';', r"/", '[', ']', '"', '{', '}',
                 '(', ')', '=', '+', '\\', '_', '-',
-                '>', '<', '@', '`', ',', '?', '!']
+                '>', '<', '@', '`', ',', '?', '!']   
+#^ for function process_puntuation
 
 
-def get_score(occurences):
+def get_score(occurences):  # ?
     if occurences == 0:
         return 0
     elif occurences == 1:
@@ -90,33 +92,54 @@ def get_score(occurences):
         return 1
 
 
+# def process_punctuation(inText, old):
+#     outText = inText
+#     for p in punct:
+#         if (p + ' ' in inText or ' ' + p in inText) or (re.search(comma_strip, inText) != None): # ? 
+#             outText = outText.replace(p, '')
+#         else:
+#             outText = outText.replace(p, ' ')
+#     outText = period_strip.sub("", outText, re.UNICODE)
+#     return outText
+
 def process_punctuation(inText):
     outText = inText
+    outText = comma_strip.sub("", outText)
+    outText = period_strip.sub(" ", outText)
     for p in punct:
-        if (p + ' ' in inText or ' ' + p in inText) \
-           or (re.search(comma_strip, inText) != None): # ? 
-            outText = outText.replace(p, '')
-        else:
-            outText = outText.replace(p, ' ')
-    outText = period_strip.sub("", outText, re.UNICODE)
+        outText = outText.replace(p, ' ')
     return outText
+        # outText = outText.replace(p + ' ', ' ')
+        # outText = outText.replace(' ' + p, ' ')
+        # outText = outText.replace(p, ' ')
+#^ get rid of the punctuations except ' (useful in contractioins)
 
+# def process_digit_article(inText, old):
+#     outText = []
+#     tempText = inText.lower().split()
+#     for word in tempText:
+#         word = manual_map.setdefault(word, word)
+#         if word not in articles:
+#             outText.append(word)
+#         else:
+#             pass
+#     for wordId, word in enumerate(outText):
+#         if word in contractions:
+#             outText[wordId] = contractions[word]
+#     outText = ' '.join(outText)
+#     return outText
 
 def process_digit_article(inText):
     outText = []
     tempText = inText.lower().split()
     for word in tempText:
-        word = manual_map.setdefault(word, word)
+        word = manual_map.get(word, word)
+        word = contractions.get(word, word)
         if word not in articles:
             outText.append(word)
-        else:
-            pass
-    for wordId, word in enumerate(outText):
-        if word in contractions:
-            outText[wordId] = contractions[word]
-    outText = ' '.join(outText)
+    outText = " ".join(outText)
     return outText
-
+#^ substitude content by manual_map and contractions, and get rid of articles(a, an, the)
 
 def multiple_replace(text, wordDict):
     for key in wordDict:
@@ -246,6 +269,10 @@ if __name__ == '__main__':
     #* "image_id", "answer_type" and "question_id"
     answers = train_answers + val_answers
     occurence = filter_answers(answers, 9)
-    ans2label = create_ans2label(occurence, 'trainval')
+    #~ get occurence (answer to times of occurence) to filter answers that are too rare
+    ans2label = create_ans2label(occurence, 'trainval') 
+    #~ create ans2label and label2ans according to occurence and pickle down them
     compute_target(train_answers, ans2label, 'train')
+    #~ compute target [{question_id, image_id, labels, scores}, ...]
     compute_target(val_answers, ans2label, 'val')
+    #~ compute target [{question_id, image_id, labels, scores}, ...]
